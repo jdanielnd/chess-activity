@@ -1,6 +1,6 @@
 module Material
   class Board
-    attr_accessor :fields
+    attr_accessor :fields, :pieces
 
     def initialize
       @fields = Array.new(8).map do |col|
@@ -16,6 +16,21 @@ module Material
 
     def []=(coord, value)
       fields[coord[1]][coord[0]] = value
+    end
+
+    def dup
+      @pieces.each_with_object(Board.new) do |piece, board_copy|
+        board_copy[piece.position] = piece.dup(board_copy)
+        board_copy.pieces << board_copy[piece.position]
+      end
+    end
+
+    def empty?(x, y)
+      self[[x,y]].nil?
+    end
+
+    def enemy?(x, y, color)
+      self[[x,y]] && (self[[x,y]].color != color)
     end
 
     def setup
@@ -77,8 +92,9 @@ module Material
     def move(start_pos, end_pos)
       piece = self[start_pos]
 
-      raise BadMoveError.new("There is no piece there!") if piece == nil
-
+      raise BadMoveError.new("There is no piece there!") if empty?(start_pos[0], start_pos[1])
+      raise BadMoveError.new("Cannot move into check!") if moving_into_check?(start_pos, end_pos)
+      
       if piece.valid_moves.include?(end_pos)
         move!(start_pos, end_pos)
       else
@@ -87,11 +103,31 @@ module Material
 
     end
 
-    def move!(piece_pos, end_pos)
-      piece = self[piece_pos]
+    def move!(start_pos, end_pos)
+      piece = self[start_pos]
       piece.position, piece.moved = end_pos, true
-      self[piece_pos], self[end_pos] = nil, piece
+      self[start_pos], self[end_pos] = nil, piece
       self
+    end
+
+    def moving_into_check?(start_pos, end_pos)
+      board_copy = dup.move!(start_pos, end_pos)
+      board_copy.in_check?(board_copy[end_pos].color)
+    end
+
+    def in_check?(color)
+      king_pos = find_king(color).position
+      pieces.any? do |piece|
+        piece.color != color && piece.moves.include?(king_pos)
+      end
+    end
+
+    def find_pieces(color)
+      pieces.select { |piece| piece.color == color }
+    end
+    
+    def find_king(color)
+      find_pieces(color).find { |piece| piece.class == King }
     end
 
   end

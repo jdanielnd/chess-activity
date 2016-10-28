@@ -2,6 +2,8 @@ require "material/version"
 require "material/board"
 require "material/piece"
 
+require 'material/pieces/sliding_piece'
+require 'material/pieces/stepping_piece'
 require 'material/pieces/bishop'
 require 'material/pieces/king'
 require 'material/pieces/knight'
